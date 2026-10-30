@@ -1,5 +1,5 @@
 # temp_instr
-Схема: доступ в интернет, esr-21,к нему подключн коммутатор mes 21 и к нему 2 клиента на разных vlan
+Схема: доступ в интернет, esr-21,к нему подключен коммутатор mes 21 и к нему 2 клиента на разных vlan
 1. Настройка esr-21:
   1) подключаем один клиент к esr-21
   2) на момент подключения IP-клиента - 192.168.1.2, Ip esr - 192.168.1.1 (password->toor)
@@ -350,3 +350,44 @@ DISABLED=no
   220) exit
   221) exit
   222) commit+confirm
+
+Модификация схемы: подмена MES на Alt JeOS (systemd) + OVS (Open VSwitch)
+  1) ip -c a --> enp0s25, enp1s0, enp2s0 - все интерфейсы (в нашем случае)
+  2) vim /etc/net/ifaces/enp0s25/options
+  3) BOOTPROTO=dhcp + SYSTEMD_BOOTPROTO=dhcp4
+  4) Shift+"Ж"-->qw
+  5) systemctl restart network
+  6) apt-get update
+  7) apt-get install openvswitch
+  8) systemctl enable --now openvswitch
+  9) modprobe 8021q
+  10) echo "8021q" > /etc/modules-load.d/8021q.conf
+  11) lsmod | grep 8021q
+  12) mc --> /etc/net/ifaces создать папки под каждый интерфейс (если таких нет. Можно и через терминал --> mkdir или f7)
+  13) В каждом каталоге создать файл options (touch options, находясь в текущем каталоге через mc)
+  14) в каждый из них через f4 (редактирование) добавить всего 3 строки:
+TYPE=eth
+BOOTPROTO=none
+CONFIGURED=yes
+  15) сохраняем (f2)
+  16) выходим
+  17) Ниже:
+# Создаём мост
+ovs-vsctl add-br ovs-br0
+
+# Uplink к ESR-21 (trunk: только VLAN 100 и 200)
+ovs-vsctl add-port ovs-br0 enp0s25 trunk=100,200
+
+# Клиент 1 (access, VLAN 100)
+ovs-vsctl add-port ovs-br0 enp1s0 tag=100
+
+# Клиент 2 (access, VLAN 200)
+ovs-vsctl add-port ovs-br0 enp2s0 tag=200
+  18) Ниже:
+cat << 'EOF' >> /etc/rc.local
+ip link set enp0s25 up
+ip link set enp1s0 up
+ip link set enp2s0 up
+EOF
+chmod +x /etc/rc.local
+  19) ВСЁ!!!! Собираем обновлённую схему
