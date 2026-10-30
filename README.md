@@ -383,6 +383,7 @@ ovs-vsctl add-port ovs-br0 enp1s0 tag=100
 
 # Клиент 2 (access, VLAN 200)
 ovs-vsctl add-port ovs-br0 enp2s0 tag=200
+
   18) Ниже:
 cat << 'EOF' >> /etc/rc.local
 ip link set enp0s25 up
